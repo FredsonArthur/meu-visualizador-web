@@ -1,1 +1,49 @@
 
+# ========================
+# 1. Arquivos/Pastas do VS Code
+# ========================
+
+# Diretório de configurações do VS Code (local, temporário)
+.vscode/
+
+# Arquivos de backup e lixeira do VS Code
+*.code-workspace
+*.bak
+*.swp
+
+# ========================
+# 2. Arquivos/Pastas do Sistema Operacional
+# ========================
+
+# Arquivos de metadados do macOS
+.DS_Store
+
+# Arquivos de miniaturas do Windows
+Thumbs.db
+
+# ========================
+# 3. Gerenciamento de Pacotes (Node.js/npm)
+# (Incluir caso você use JavaScript para funcionalidades avançadas)
+# ========================
+
+# Pasta de dependências (muito grande, nunca deve ser versionada)
+/node_modules
+
+# Arquivos de log de erros do npm
+npm-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ========================
+# 4. Saída do Build e Cache
+# (Caso você use ferramentas como Webpack, Babel, etc.)
+# ========================
+
+# Exemplos de pastas de build
+/dist
+/build
+/out
+
+# Arquivos de cache
+*.log
+.cache
