@@ -61,7 +61,7 @@ main {
 }
 
 /* ======================== */
-/* 2. Estilos para Modal (FUNCIONALIDADE CRUCIAL) */
+/* 2. Estilos para Modal */
 /* ======================== */
 .modal-background {
     position: fixed;
@@ -76,7 +76,6 @@ main {
     z-index: 1000;
 }
 
-/* CLASSE CRUCIAL PARA ESCONDER/MOSTRAR COM JS */
 .modal-background.hidden {
     display: none;
 }
