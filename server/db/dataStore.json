@@ -1,0 +1,41 @@
+{
+  "collections": [
+    {
+      "id": "col-inbox",
+      "name": "Inbox",
+      "icon": "fa-inbox",
+      "color": "#9b59b6"
+    },
+    {
+      "id": "col-dev",
+      "name": "Dev & Código",
+      "icon": "fa-code",
+      "color": "#2ecc71"
+    }
+    // Adicione mais coleções aqui
+  ],
+  "links": [
+    {
+      "id": "lk-001",
+      "url": "https://reactjs.org/",
+      "title": "React – A biblioteca para interfaces de usuário",
+      "description": "Uma biblioteca JavaScript para construir interfaces de usuário.",
+      "date_saved": "2025-12-08T15:00:00Z",
+      "preview_image_url": null,
+      "is_read": false,
+      "collection_id": "col-dev",
+      "tags": ["javascript", "frameworks", "frontend"]
+    },
+    {
+      "id": "lk-002",
+      "url": "https://figma.com/",
+      "title": "Figma: Ferramenta de design colaborativa",
+      "description": "Design, prototipagem e ferramentas de design colaborativo.",
+      "date_saved": "2025-12-08T15:05:00Z",
+      "preview_image_url": null,
+      "is_read": false,
+      "collection_id": "col-inbox",
+      "tags": ["ui/ux", "ferramentas"]
+    }
+  ]
+}

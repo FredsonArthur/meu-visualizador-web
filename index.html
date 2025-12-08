@@ -3,53 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Visualizador Web Local - Início</title>
-    
-    <link rel="stylesheet" href="css/style.css">
+    <title>Meu Visualizador de Links</title>
+    <link rel="stylesheet" href="src/styles/index.css"> 
 </head>
 <body>
+    <header><h1>Meu Visualizador de Links</h1></header>
 
-    <header>
-        <h1>Bem-vindo ao seu Visualizador Web Local!</h1>
-        <p>Este ambiente está rodando no Live Server do VS Code. O servidor e os arquivos estão configurados corretamente.</p>
-    </header>
-    
-    <div id="nav-placeholder"></div> <main>
-        <section class="info-status">
-            <h2>Status do Projeto</h2>
-            <ul>
-                <li><strong>HTML:</strong> Carregado com sucesso.</li>
-                <li><strong>CSS:</strong> Verifique se o fundo da página está colorido e o layout está padronizado.</li>
-                <li><strong>JavaScript:</strong> Abra o console do navegador (F12) para ver a mensagem do `main.js`.</li>
-            </ul>
-        </section>
+    <div id="sidebar">
+        </div>
 
-        <section class="navegacao">
-            <h2>Testando Navegação e Pastas</h2>
-            
-            <p>Este link verifica se você consegue navegar para uma página dentro da pasta `pages/`:</p>
-            <a href="pages/outra-pagina.html" class="btn">Ir para Página de Teste (Navegação)</a>
-            
-            <p>Para testar a pasta `assets/images/`, carregamos o arquivo SVG de placeholder:</p>
-            <img src="assets/images/placeholder.svg" alt="Imagem Placeholder" style="max-width: 100%; height: auto; border: 1px solid #ccc; display: block; margin-top: 10px;">
-        </section>
-        
-        <section class="testes-componentes">
-            <h2>Testes de Componentes (Pasta `pages/`)</h2>
-            <p>Acesse os arquivos de teste de componentes de UI:</p>
-            <ul>
-                <li><a href="pages/form-teste.html">Formulário de Teste</a></li>
-                <li><a href="pages/modal-teste.html">Modal de Teste</a></li>
-                <li><a href="pages/nav-teste.html">Navegação (Nav) de Teste</a></li>
-            </ul>
-        </section>
+    <main>
+        <div class="main-actions-container" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <input type="text" id="search-input" placeholder="🔎 Buscar links por título, tag ou URL..." style="padding: 10px; flex-grow: 1; margin-right: 10px; border: 1px solid #ccc; border-radius: 4px;">
+            <button id="add-link-btn">➕ Adicionar Novo Link</button>
+        </div>
+        <form id="link-form" style="display:none; border: 1px solid #ccc; padding: 15px; margin-bottom: 20px;">
+            <h3>Salvar Novo Link</h3>
+            <input type="url" id="link-url" placeholder="URL completa" required><br>
+            <input type="text" id="link-title" placeholder="Título (Opcional)"><br>
+            <input type="text" id="link-description" placeholder="Descrição (Opcional)"><br>
+            <input type="text" id="link-tags" placeholder="Tags (separadas por vírgula)"><br>
+            <select id="link-collection">
+                </select><br>
+            <button type="submit">Salvar Link</button>
+        </form>
 
+        <div id="link-grid">
+            </div>
     </main>
 
-    <footer>
-        <p>&copy; 2025 Visualizador Local | Projeto de Estudo.</p>
-    </footer>
-
-    <script src="js/main.js"></script>
+    <div id="preview-modal" style="
+        display: none; 
+        position: fixed; 
+        top: 0; 
+        left: 0; 
+        width: 100%; 
+        height: 100%; 
+        background-color: rgba(0, 0, 0, 0.9); 
+        z-index: 1000;
+        flex-direction: column; 
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    ">
+        <button id="close-preview-btn" style="
+            position: absolute; 
+            top: 20px; 
+            right: 20px; 
+            font-size: 20px; 
+            background: red; 
+            color: white; 
+            border: none; 
+            cursor: pointer;
+            padding: 10px 15px;
+            border-radius: 5px;
+        ">X Fechar</button>
+        <div id="preview-content" style="
+            width: 90%; 
+            height: 90%; 
+            background-color: white;
+        ">
+            </div>
+    </div>
+    <script src="src/pages/Home.js"></script>
 </body>
 </html>
