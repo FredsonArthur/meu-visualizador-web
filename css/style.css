@@ -1,71 +1,128 @@
-/* css/style.css */
+/* css/style.css - Versão Simples e Limpa */
 
-/* Reset básico e tipografia */
+/* ======================== */
+/* Estilos Globais e Reset */
+/* ======================== */
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #e8f5e9; /* Fundo verde claro para confirmação visual */
-    color: #1b5e20; /* Texto verde escuro */
+    font-family: Arial, sans-serif;
+    background-color: #f7f7f7; /* Fundo muito claro */
+    color: #333;
     margin: 0;
     padding: 0;
-    line-height: 1.6;
+    line-height: 1.5;
 }
 
-/* Estilo do cabeçalho */
 header {
-    background-color: #4caf50; /* Verde principal */
+    background-color: #4a90e2; /* Azul simples */
     color: white;
     padding: 20px;
     text-align: center;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-header h1 {
-    margin: 0;
-}
-
-/* Estilo do conteúdo principal */
 main {
     padding: 20px;
     max-width: 900px;
     margin: 20px auto;
     background-color: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.info-status ul {
-    list-style: none;
-    padding-left: 0;
-}
-
-.info-status li {
-    background: #f1f8e9;
-    padding: 10px;
-    margin-bottom: 5px;
-    border-left: 4px solid #81c784;
-}
-
-/* Estilo do botão de navegação */
+/* ======================== */
+/* Botões e Links de Navegação */
+/* ======================== */
 .btn {
     display: inline-block;
-    background-color: #388e3c;
+    background-color: #4a90e2;
     color: white;
     padding: 10px 15px;
     text-decoration: none;
     border-radius: 5px;
     margin-top: 15px;
-    transition: background-color 0.3s;
+    cursor: pointer;
+    border: none;
+    transition: background-color 0.2s;
 }
 
 .btn:hover {
-    background-color: #1b5e20;
+    background-color: #357bd8;
 }
 
-/* Estilo do rodapé */
-footer {
-    text-align: center;
-    padding: 10px;
-    margin-top: 30px;
-    color: #9e9e9e;
-    font-size: 0.9em;
+/* ======================== */
+/* 2. Estilos para Modal (FUNCIONALIDADE CRUCIAL) */
+/* ======================== */
+.modal-background {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7); /* Fundo escuro */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+/* CLASSE CRUCIAL PARA ESCONDER/MOSTRAR COM JS */
+.modal-background.hidden {
+    display: none;
+}
+
+.modal-content {
+    background: white;
+    padding: 30px;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.modal-close {
+    float: right;
+    cursor: pointer;
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #aaa;
+}
+.modal-close:hover {
+    color: #333;
+}
+
+/* ======================== */
+/* 3. Estilos de Componentes Simples */
+/* ======================== */
+/* Formulários */
+.form-container {
+    max-width: 450px;
+    margin: 20px auto;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+.form-container input, .form-container textarea {
+    width: 100%;
+    padding: 8px;
+    margin-top: 5px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    box-sizing: border-box;
+}
+
+/* Navegação */
+.navbar {
+    background-color: #333; 
+    overflow: hidden;
+    margin-bottom: 20px;
+}
+.navbar a {
+    float: left;
+    display: block;
+    color: white;
+    padding: 14px 16px;
+    text-decoration: none;
+}
+.navbar a:hover {
+    background-color: #555;
 }
