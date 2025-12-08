@@ -9,6 +9,38 @@ console.log("-----------------------------------------");
 document.addEventListener('DOMContentLoaded', () => {
     
     // ==========================================
+    // 0. LÓGICA DE INJEÇÃO DE COMPONENTE (NAV)
+    // ==========================================
+    function loadNavComponent() {
+        const navPlaceholder = document.getElementById('nav-placeholder');
+        
+        if (navPlaceholder) {
+            // Se a página estiver em 'pages/', precisa de '../'. Caso contrário, é na raiz.
+            let navPath = (window.location.pathname.includes('/pages/')) ? '../_nav.html' : '_nav.html';
+
+            fetch(navPath)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Status HTTP ${response.status}`);
+                    }
+                    return response.text();
+                })
+                .then(html => {
+                    navPlaceholder.innerHTML = html;
+                })
+                .catch(error => {
+                    // Mensagem de erro visível se a navegação falhar
+                    navPlaceholder.innerHTML = '<p style="color:red; text-align:center; padding:10px; background:#fff0f0; border:1px solid red;">[Erro ao carregar navegação. Verifique se _nav.html existe na raiz e o caminho está correto.]</p>';
+                    console.error("Erro ao carregar a navegação:", error);
+                });
+        }
+    }
+
+    // Chame a função para carregar a navegação
+    loadNavComponent(); 
+
+    
+    // ==========================================
     // 1. LÓGICA DO MODAL (Usada em pages/modal-teste.html)
     // ==========================================
     // Obtém referências para os elementos do Modal
