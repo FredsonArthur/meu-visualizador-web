@@ -1,69 +1,52 @@
-const puppeteer = require('puppeteer');
+// Simula a captura de dados externos (Web Scraper)
 const fs = require('fs');
 const path = require('path');
 
-// Caminho de salvamento das imagens (relativo ao diretório 'api')
-const PREVIEWS_DIR = path.join(__dirname, '..', '..', 'src', 'assets', 'previews');
+// Define o diretório onde as imagens de pré-visualização seriam salvas
+const PREVIEW_DIR = path.join(__dirname, '..', '..', '..', 'public', 'previews');
 
-// Função para garantir que o diretório exista
-function ensureDirectoryExistence(dir) {
-    if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-        console.log(`Diretório de previews criado: ${dir}`);
-    }
+// Garante que o diretório de previews existe
+if (!fs.existsSync(PREVIEW_DIR)) {
+    fs.mkdirSync(PREVIEW_DIR, { recursive: true });
+}
+
+// Simula um delay de rede/processamento de scraper (1s a 3s)
+const simulateScraperDelay = () => {
+    const delay = Math.random() * 2000 + 1000; // 1000ms a 3000ms
+    return new Promise(resolve => setTimeout(resolve, delay));
+};
+
+/**
+ * 📸 Simula a captura de screenshot e obtenção de metadados de uma URL.
+ * @param {string} url - A URL para fazer o scraping.
+ * @param {string} linkId - O ID do link (usado para nomear o arquivo de imagem).
+ * @returns {string} A URL simulada da imagem de pré-visualização salva.
+ */
+async function captureScreenshot(url, linkId) {
+    await simulateScraperDelay();
+
+    // Simula a URL que o Front-end usaria para acessar a imagem salva
+    const mockImageUrl = `https://picsum.photos/400/300?random=${linkId}`; 
+    
+    return mockImageUrl;
 }
 
 /**
- * 📸 Captura um screenshot de uma URL.
- * @param {string} url - A URL do site a ser capturado.
- * @param {string} linkId - O ID do link para nomear o arquivo.
- * @returns {string | null} O caminho relativo da imagem para uso no Front-end, ou null em caso de falha.
+ * 📋 Simula a extração de Título e Descrição de uma URL.
+ * @param {string} url - A URL para fazer o scraping.
+ * @returns {Object} Um objeto com { title, description }.
  */
-async function captureScreenshot(url, linkId) {
-    let browser;
-    ensureDirectoryExistence(PREVIEWS_DIR);
+async function getMetadata(url) {
+    await simulateScraperDelay();
+    
+    // Simula a extração de dados baseado na URL ou um mock genérico
+    const title = `Título Gerado para: ${url.substring(0, 30)}...`;
+    const description = "Esta é uma descrição mock gerada pelo scraper. Em produção, este texto viria da tag <meta name='description'> da página.";
 
-    // O Puppeteer precisa ser instalado no projeto (npm install puppeteer)
-    try {
-        console.log(`Iniciando captura de screenshot para: ${url}`);
-        // Configurações do navegador (headless)
-        browser = await puppeteer.launch({ 
-            args: ['--no-sandbox', '--disable-setuid-sandbox'] 
-        }); 
-        
-        const page = await browser.newPage();
-        
-        // Define a resolução da pré-visualização (tamanho comum de card)
-        await page.setViewport({ width: 800, height: 600 }); 
-        
-        // Tenta navegar
-        await page.goto(url, { 
-            waitUntil: 'networkidle2', 
-            timeout: 20000 // 20 segundos de timeout
-        }); 
-
-        const filename = `${linkId}.jpg`;
-        const screenshotPath = path.join(PREVIEWS_DIR, filename);
-        
-        // Caminho relativo para o Front-end (que está em 'src')
-        const relativeUrl = `/src/assets/previews/${filename}`; 
-
-        // Tira o screenshot
-        await page.screenshot({ 
-            path: screenshotPath,
-            type: 'jpeg',
-            quality: 85
-        });
-
-        await browser.close();
-        console.log(`Screenshot salvo em: ${relativeUrl}`);
-        return relativeUrl;
-        
-    } catch (error) {
-        console.error(`[SCRAPER ERROR] Falha ao capturar screenshot para ${url}:`, error.message);
-        if (browser) await browser.close();
-        return null; // Retorna null para indicar falha
-    }
+    return { title, description };
 }
 
-module.exports = { captureScreenshot };
+module.exports = {
+    captureScreenshot,
+    getMetadata
+};

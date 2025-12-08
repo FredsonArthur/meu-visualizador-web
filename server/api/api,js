@@ -1,0 +1,160 @@
+// Simula a importação das funções de gerenciamento de dados do "backend"
+const { 
+    getAllCollections, 
+    getLinksByCollection, 
+    createLink,
+    deleteLink, 
+    updateLink,
+    searchLinks,
+    toggleLinkReadStatus // ⬅️ NOVO: Importamos a nova função
+} = require('../../server/api/linkManager'); 
+
+// ----------------------------------------------------
+// UTILS DE SIMULAÇÃO
+// ----------------------------------------------------
+
+/**
+ * Simula um delay de rede (100ms a 500ms)
+ */
+const simulateNetworkDelay = () => {
+    // Atraso de 100ms a 500ms para simular latência de rede
+    const delay = Math.random() * 400 + 100; 
+    return new Promise(resolve => setTimeout(resolve, delay));
+};
+
+/**
+ * Constrói um objeto de resposta simulado, semelhante ao Fetch API
+ */
+const mockResponse = (data, status = 200) => ({
+    status: status,
+    ok: status >= 200 && status < 300,
+    // Função para ler o corpo (dados) de forma assíncrona
+    json: async () => data, 
+    // Função para ler o corpo como texto
+    text: async () => JSON.stringify(data),
+});
+
+
+// ----------------------------------------------------
+// ROTAS MOCK (Substituindo as chamadas diretas)
+// ----------------------------------------------------
+
+/**
+ * 📚 GET /api/collections
+ * Retorna todas as coleções.
+ */
+async function apiGetCollections() {
+    await simulateNetworkDelay();
+    try {
+        const collections = getAllCollections();
+        return mockResponse(collections, 200);
+    } catch (error) {
+        return mockResponse({ message: 'Erro ao buscar coleções' }, 500);
+    }
+}
+
+/**
+ * 🔗 GET /api/links/:collectionId
+ * Retorna os links de uma coleção ou todos.
+ */
+async function apiGetLinks(collectionId) {
+    await simulateNetworkDelay();
+    try {
+        const links = getLinksByCollection(collectionId);
+        return mockResponse(links, 200);
+    } catch (error) {
+        return mockResponse({ message: 'Erro ao buscar links' }, 500);
+    }
+}
+
+/**
+ * ➕ POST /api/links
+ * Cria um novo link.
+ */
+async function apiCreateLink(linkData) {
+    // Não simula delay aqui, pois o delay já está dentro do createLink (scraper)
+    try {
+        const newLink = await createLink(linkData); // createLink já é async
+        return mockResponse(newLink, 201); // 201 Created
+    } catch (error) {
+        return mockResponse({ message: 'Erro ao criar link' }, 500);
+    }
+}
+
+/**
+ * 🗑️ DELETE /api/links/:linkId
+ * Exclui um link.
+ */
+async function apiDeleteLink(linkId) {
+    await simulateNetworkDelay();
+    try {
+        const success = deleteLink(linkId);
+        if (success) {
+            return mockResponse(null, 204); // 204 No Content (Sucesso, sem corpo)
+        }
+        return mockResponse({ message: 'Link não encontrado' }, 404);
+    } catch (error) {
+        return mockResponse({ message: 'Erro ao excluir link' }, 500);
+    }
+}
+
+/**
+ * ✏️ PUT /api/links/:linkId
+ * Atualiza um link existente.
+ */
+async function apiUpdateLink(linkId, newData) {
+    await simulateNetworkDelay();
+    try {
+        const success = updateLink(linkId, newData);
+        if (success) {
+            return mockResponse({ message: 'Link atualizado com sucesso' }, 200);
+        }
+        return mockResponse({ message: 'Link não encontrado' }, 404);
+    } catch (error) {
+        console.error("Erro na API (Atualização):", error);
+        return mockResponse({ message: 'Erro ao atualizar link' }, 500);
+    }
+}
+
+/**
+ * 🔎 GET /api/search?q=:query
+ * Busca links.
+ */
+async function apiSearchLinks(query) {
+    await simulateNetworkDelay();
+    try {
+        const results = searchLinks(query);
+        return mockResponse(results, 200);
+    } catch (error) {
+        return mockResponse({ message: 'Erro ao buscar links' }, 500);
+    }
+}
+
+/**
+ * 🔄 PUT /api/links/:linkId/toggle-read (NOVA ROTA)
+ * Alterna o status 'lido' de um link.
+ */
+async function apiToggleReadStatus(linkId) {
+    await simulateNetworkDelay(); // Simula o delay de rede
+    try {
+        const success = toggleLinkReadStatus(linkId);
+        if (success) {
+            return mockResponse({ message: 'Status atualizado' }, 200);
+        }
+        return mockResponse({ message: 'Link não encontrado' }, 404);
+    } catch (error) {
+        return mockResponse({ message: 'Erro ao alternar status' }, 500);
+    }
+}
+
+
+// Exporta todas as rotas simuladas para serem usadas pelo Front-end (home.js)
+module.exports = {
+    apiGetCollections,
+    apiGetLinks,
+    apiCreateLink,
+    apiDeleteLink,
+    apiUpdateLink,
+    apiSearchLinks,
+    apiToggleReadStatus // ⬅️ NOVO: Exportamos o toggle read
+};

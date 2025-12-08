@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
-const { captureScreenshot } = require('./scraper'); // IMPORTAÇÃO DA NOVA FUNÇÃO
+// MUDANÇA: Importamos as duas funções do nosso scraper mock
+const { captureScreenshot, getMetadata } = require('./scraper'); 
 
 // Define o caminho para o arquivo de dados
 const DATA_PATH = path.join(__dirname, '..', 'db', 'dataStore.json');
@@ -60,17 +61,23 @@ function getLinksByCollection(collectionId) {
  * @param {Object} linkData - Os dados do novo link.
  * @returns {Object} O novo objeto LinkItem.
  */
-async function createLink(linkData) { // FUNÇÃO AGORA É ASSÍNCRONA
+async function createLink(linkData) { 
     const data = readData();
     const newLinkId = `lk-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
     
-    // 1. CHAMA A CAPTURA DE SCREENSHOT
+    // 1. CHAMA A CAPTURA DE SCREENSHOT (Simulação)
     const previewUrl = await captureScreenshot(linkData.url, newLinkId);
+    
+    // 2. OBTÉM METADADOS (Simulação)
+    const metadata = await getMetadata(linkData.url);
 
     const newLink = {
         id: newLinkId, // ID único simples
         date_saved: new Date().toISOString(),
-        ...linkData, // Espalha os dados recebidos (url, title, description, collection_id, tags...)
+        ...linkData, 
+        // Sobrescreve title/description se o scraper mock retornar algo melhor e o usuário não tiver preenchido
+        title: linkData.title || metadata.title,
+        description: linkData.description || metadata.description, 
         is_read: false,
         preview_image_url: previewUrl // USA A URL DO SCREENSHOT
     };
@@ -81,7 +88,7 @@ async function createLink(linkData) { // FUNÇÃO AGORA É ASSÍNCRONA
 }
 
 /**
- * 🗑️ Exclui um link pelo ID.
+ * 🗑️ Exclui um link pelo seu ID.
  * @param {string} linkId - ID do link a ser excluído.
  * @returns {boolean} True se a exclusão foi bem-sucedida.
  */
@@ -110,11 +117,9 @@ function updateLink(linkId, newData) {
     const index = data.links.findIndex(link => link.id === linkId);
 
     if (index !== -1) {
-        // Aplica os novos dados sobre o link existente (mantendo o ID e data_saved originais)
         data.links[index] = {
             ...data.links[index],
             ...newData,
-            // As tags devem ser um array, garantindo que o Front-end envie o formato correto
             tags: newData.tags || data.links[index].tags 
         };
         writeData(data);
@@ -124,30 +129,39 @@ function updateLink(linkId, newData) {
 }
 
 /**
- * 🔎 Busca links em todos os campos (título, descrição, URL, tags). (NOVA FUNÇÃO)
+ * 🔎 Busca links por título, descrição ou tags.
  * @param {string} query - O termo de busca.
- * @returns {Array} Lista de objetos LinkItem filtrados.
+ * @returns {Array} Lista de links correspondentes.
  */
-function searchLinks(query) { 
+function searchLinks(query) {
     const data = readData();
-    if (!query || query.trim() === '') {
-        return data.links; // Retorna todos se a busca for vazia
+    const q = query.toLowerCase();
+
+    return data.links.filter(link => 
+        (link.title && link.title.toLowerCase().includes(q)) ||
+        (link.description && link.description.toLowerCase().includes(q)) ||
+        link.tags.some(tag => tag.toLowerCase().includes(q)) ||
+        link.url.toLowerCase().includes(q)
+    );
+}
+
+/**
+ * 🔄 Alterna o status 'is_read' de um link. (NOVA FUNÇÃO)
+ * @param {string} linkId - ID do link.
+ * @returns {boolean} True se o status foi alterado.
+ */
+function toggleLinkReadStatus(linkId) {
+    const data = readData();
+    // Encontra o índice do link na array de links
+    const index = data.links.findIndex(link => link.id === linkId);
+
+    if (index !== -1) {
+        // Alterna o valor booleano
+        data.links[index].is_read = !data.links[index].is_read;
+        writeData(data);
+        return true;
     }
-    const lowerCaseQuery = query.toLowerCase().trim();
-
-    return data.links.filter(link => {
-        // 1. Busca por Título, URL e Descrição
-        const contentMatch = [
-            link.title,
-            link.description,
-            link.url
-        ].some(field => field && field.toLowerCase().includes(lowerCaseQuery));
-
-        // 2. Busca por Tags
-        const tagMatch = link.tags.some(tag => tag.toLowerCase().includes(lowerCaseQuery));
-
-        return contentMatch || tagMatch;
-    });
+    return false;
 }
 
 // Exporta as funções para serem usadas no Front-end
@@ -157,5 +171,6 @@ module.exports = {
     createLink,
     deleteLink, 
     updateLink,
-    searchLinks // NOVO EXPORT
+    searchLinks,
+    toggleLinkReadStatus // ⬅️ NOVO: Exportamos a nova função
 };
