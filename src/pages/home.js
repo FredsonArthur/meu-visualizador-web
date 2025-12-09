@@ -1,20 +1,41 @@
 // Arquivo: src/pages/home.js
 
-// NOVO: Importa apenas o createLinkCard
-const { createLinkCard } = require('../components/LinkCard');
+// Importamos apenas o componente de renderização do Card
+const { createLinkCard } = require('../components/LinkCard'); 
 
-// Importa APENAS as rotas da API que home.js precisa diretamente:
-// - GetCollections e GetLinks para carregar a página/sidebar
-// - CreateLink e UpdateLink para o formulário de adição/edição
-// - SearchLinks para a busca
-const { 
-    apiGetCollections, 
-    apiGetLinks, 
-    apiCreateLink,
-    apiUpdateLink, 
-    apiSearchLinks,
-    apiToggleReadStatus // Importação mantida (se usada em outro local)
-} = require('../../server/api/api'); 
+// REMOVEMOS A IMPORTAÇÃO DO MOCK API AQUI!
+// const { apiGetCollections, apiGetLinks, apiCreateLink, ... } = require('../../server/api/api'); 
+
+
+// ===================================================
+// UTILS DE API (Fetch Real) 🌐
+// ===================================================
+
+const BASE_URL = '/api';
+
+/**
+ * Utilitário para fazer requisições Fetch para o servidor Express.
+ * @param {string} url - O endpoint da API (ex: /links/col-inbox).
+ * @param {string} method - O método HTTP (GET, POST, PUT, DELETE).
+ * @param {Object} data - O corpo da requisição para POST/PUT.
+ * @returns {Promise<Response>} A resposta nativa do Fetch.
+ */
+async function fetchApi(url, method = 'GET', data = null) {
+    const options = {
+        method,
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    };
+    if (data) {
+        options.body = JSON.stringify(data);
+    }
+    
+    // A chamada real para http://localhost:3000/api/endpoint
+    const response = await fetch(`${BASE_URL}${url}`, options);
+    return response;
+}
+
 
 // ===================================================
 // VARIÁVEIS DO DOM
@@ -30,6 +51,10 @@ const closePreviewBtn = document.getElementById('close-preview-btn');
 const searchInput = document.getElementById('search-input'); 
 
 let currentCollectionId = 'col-inbox'; // Começa na Inbox
+
+// Exportamos a função fetchApi para que LinkCard possa usá-la
+module.exports.fetchApi = fetchApi; 
+
 
 // ===================================================
 // FUNÇÕES DE PREVIEW (LIVE IFRAME)
@@ -63,15 +88,17 @@ if (closePreviewBtn) {
     });
 }
 
+
 // ===================================================
-// FUNÇÕES DE RENDERIZAÇÃO E DADOS
+// FUNÇÕES DE RENDERIZAÇÃO E DADOS (ATUALIZADAS)
 // ===================================================
 
 /**
  * 🎨 Renderiza a lista de coleções na barra lateral.
  */
 async function renderSidebar() {
-    const collectionsResponse = await apiGetCollections();
+    // CHAMA A API REAL
+    const collectionsResponse = await fetchApi('/collections'); 
     const collections = collectionsResponse.ok ? await collectionsResponse.json() : [];
 
     const list = document.createElement('ul');
@@ -109,9 +136,11 @@ async function renderSidebar() {
 async function loadLinks(collectionId) {
     linkGridElement.innerHTML = '<h2>Carregando links...</h2>';
     
-    const linksResponse = await apiGetLinks(collectionId);
+    // CHAMA A API REAL
+    const linksResponse = await fetchApi(`/links/${collectionId}`); 
+    
     if (!linksResponse.ok) {
-        linkGridElement.innerHTML = '<h2>Erro ao carregar links.</h2>';
+        linkGridElement.innerHTML = `<h2>Erro ao carregar links. Status: ${linksResponse.status}</h2>`;
         return;
     }
     
@@ -123,14 +152,18 @@ async function loadLinks(collectionId) {
     }
     
     linkGridElement.innerHTML = '';
+    
+    // A função loadLinks é passada para LinkCard.js para que ele possa recarregar a lista
+    // após ações (como deletar ou marcar como lido).
     links.forEach(link => {
         const cardElement = createLinkCard(link, loadLinks, openPreview);
         linkGridElement.appendChild(cardElement);
     });
 }
 
+
 // ===================================================
-// HANDLERS DO FORMULÁRIO
+// HANDLERS DO FORMULÁRIO (ATUALIZADOS)
 // ===================================================
 
 /**
@@ -144,8 +177,7 @@ async function handleLinkFormSubmit(e) {
     linkFormElement.style.pointerEvents = 'none'; // Desabilita o formulário durante o processo
 
     const url = document.getElementById('link-url').value;
-    // const title = document.getElementById('link-title').value;         <-- REMOVIDO
-    // const description = document.getElementById('link-description').value; <-- REMOVIDO
+    // Título e Descrição não são mais coletados, pois o Scraper/Backend faz isso.
     const tags = document.getElementById('link-tags').value;
     const collectionId = document.getElementById('link-collection').value;
 
@@ -153,14 +185,13 @@ async function handleLinkFormSubmit(e) {
 
     const newLinkData = {
         url: url,
-        // Title e Description foram removidos: o linkManager/scraper irá preenchê-los
         tags: tagsArray,
         collection_id: collectionId 
     };
 
     try {
-        // A API (e o linkManager) agora farão o scraping e demorarão um pouco
-        const response = await apiCreateLink(newLinkData); 
+        // CHAMA A API REAL
+        const response = await fetchApi('/links', 'POST', newLinkData); 
         if (!response.ok) throw new Error('Falha na criação do link: Status ' + response.status);
         
         // Recarrega os links da coleção atual para mostrar o novo item
@@ -178,7 +209,7 @@ async function handleLinkFormSubmit(e) {
 
 
 // ===================================================
-// HANDLER DE BUSCA (Search)
+// HANDLER DE BUSCA (Search - ATUALIZADO)
 // ===================================================
 
 /**
@@ -188,7 +219,6 @@ async function handleSearch(e) {
     const query = e.target.value.trim();
     
     if (query.length < 3 && query.length !== 0) {
-        // Ignora buscas muito curtas (a menos que a caixa esteja vazia)
         linkGridElement.innerHTML = '<p>Digite pelo menos 3 caracteres para buscar.</p>';
         return;
     }
@@ -201,9 +231,11 @@ async function handleSearch(e) {
 
     linkGridElement.innerHTML = '<p>Buscando...</p>';
     
-    const searchResponse = await apiSearchLinks(query);
+    // CHAMA A API REAL
+    const searchResponse = await fetchApi(`/search?q=${query}`);
+    
     if (!searchResponse.ok) {
-        linkGridElement.innerHTML = '<h2>Erro na busca.</h2>';
+        linkGridElement.innerHTML = `<h2>Erro na busca. Status: ${searchResponse.status}</h2>`;
         return;
     }
 
@@ -246,9 +278,9 @@ function initApp() {
         }
         linkFormElement.addEventListener('submit', handleLinkFormSubmit);
 
-        // Preenche as opções de coleção (Busca coleções de forma assíncrona)
+        // Preenche as opções de coleção (Busca coleções de forma assíncrona com FETCH REAL)
         const select = document.getElementById('link-collection');
-        const collectionsResponse = await apiGetCollections();
+        const collectionsResponse = await fetchApi('/collections');
         const collections = collectionsResponse.ok ? await collectionsResponse.json() : [];
 
         select.innerHTML = collections.map(col => 
