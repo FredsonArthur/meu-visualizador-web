@@ -17,11 +17,11 @@
             <input type="text" id="search-input" placeholder="🔎 Buscar links por título, tag ou URL..." style="padding: 10px; flex-grow: 1; margin-right: 10px; border: 1px solid #ccc; border-radius: 4px;">
             <button id="add-link-btn">➕ Adicionar Novo Link</button>
         </div>
+        
         <form id="link-form" style="display:none; border: 1px solid #ccc; padding: 15px; margin-bottom: 20px;">
             <h3>Salvar Novo Link</h3>
             <input type="url" id="link-url" placeholder="URL completa" required><br>
-            <input type="text" id="link-title" placeholder="Título (Opcional)"><br>
-            <input type="text" id="link-description" placeholder="Descrição (Opcional)"><br>
+            
             <input type="text" id="link-tags" placeholder="Tags (separadas por vírgula)"><br>
             <select id="link-collection">
                 </select><br>
@@ -56,15 +56,13 @@
             border: none; 
             cursor: pointer;
             padding: 10px 15px;
-            border-radius: 5px;
-        ">X Fechar</button>
-        <div id="preview-content" style="
-            width: 90%; 
-            height: 90%; 
-            background-color: white;
-        ">
+            border-radius: 50%;
+            line-height: 1;
+        ">X</button>
+        <div id="preview-content" style="width: 90%; height: 90%; max-width: 1200px;">
             </div>
     </div>
+
     <script src="src/pages/Home.js"></script>
 </body>
 </html>

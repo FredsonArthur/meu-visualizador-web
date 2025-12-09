@@ -1,9 +1,11 @@
-// Simula a captura de dados externos (Web Scraper)
+// Arquivo: server/api/scraper.js
+
 const fs = require('fs');
 const path = require('path');
 
 // Define o diretório onde as imagens de pré-visualização seriam salvas
-const PREVIEW_DIR = path.join(__dirname, '..', '..', '..', 'public', 'previews');
+// (Mantido para fins de estrutura, mesmo que o mock não salve arquivos reais)
+const PREVIEW_DIR = path.join(__dirname, '..', '..', 'src', 'assets', 'previews');
 
 // Garante que o diretório de previews existe
 if (!fs.existsSync(PREVIEW_DIR)) {
@@ -23,30 +25,44 @@ const simulateScraperDelay = () => {
  * @returns {string} A URL simulada da imagem de pré-visualização salva.
  */
 async function captureScreenshot(url, linkId) {
+    // Simula o tempo de processamento do Puppeteer (se fosse real)
     await simulateScraperDelay();
 
     // Simula a URL que o Front-end usaria para acessar a imagem salva
+    // Usamos um mock URL com ID para simular uma imagem única
     const mockImageUrl = `https://picsum.photos/400/300?random=${linkId}`; 
     
+    console.log(`[SCRAPER MOCK] Screenshot simulado gerado para: ${url}`);
     return mockImageUrl;
 }
 
 /**
- * 📋 Simula a extração de Título e Descrição de uma URL.
+ * 📋 NOVO: Simula a extração de Título e Descrição de uma URL.
  * @param {string} url - A URL para fazer o scraping.
  * @returns {Object} Um objeto com { title, description }.
  */
 async function getMetadata(url) {
+    // Simula o tempo de processamento do scraping de metadados
     await simulateScraperDelay();
     
-    // Simula a extração de dados baseado na URL ou um mock genérico
-    const title = `Título Gerado para: ${url.substring(0, 30)}...`;
-    const description = "Esta é uma descrição mock gerada pelo scraper. Em produção, este texto viria da tag <meta name='description'> da página.";
-
-    return { title, description };
+    // Lógica simples de mock para simular a extração
+    if (url.includes('reactjs.org')) {
+        return { 
+            title: 'React – A biblioteca para interfaces de usuário (Auto-Scraped)', 
+            description: 'Uma biblioteca JavaScript popular para construir interfaces de usuário modernas e escaláveis.' 
+        };
+    }
+    
+    // Dados padrão para outras URLs
+    const domain = new URL(url).hostname;
+    return { 
+        title: `Conteúdo de ${domain} (Título Padrão Scraped)`, 
+        description: 'Esta é uma descrição gerada automaticamente pelo sistema de scraping mock.' 
+    };
 }
+
 
 module.exports = {
     captureScreenshot,
-    getMetadata
+    getMetadata // EXPORTAMOS A NOVA FUNÇÃO
 };

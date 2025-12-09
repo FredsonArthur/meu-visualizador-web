@@ -1,3 +1,5 @@
+// Arquivo: src/pages/home.js
+
 // NOVO: Importa apenas o createLinkCard
 const { createLinkCard } = require('../components/LinkCard');
 
@@ -11,7 +13,7 @@ const {
     apiCreateLink,
     apiUpdateLink, 
     apiSearchLinks,
-    // Rotas de exclusão/toggle foram movidas para LinkCard.js
+    apiToggleReadStatus // Importação mantida (se usada em outro local)
 } = require('../../server/api/api'); 
 
 // ===================================================
@@ -28,7 +30,6 @@ const closePreviewBtn = document.getElementById('close-preview-btn');
 const searchInput = document.getElementById('search-input'); 
 
 let currentCollectionId = 'col-inbox'; // Começa na Inbox
-
 
 // ===================================================
 // FUNÇÕES DE PREVIEW (LIVE IFRAME)
@@ -48,227 +49,103 @@ function openPreview(url) {
     iframe.style.width = '100%';
     iframe.style.height = '100%';
     iframe.style.border = 'none';
+    iframe.style.backgroundColor = '#fff';
     
-    // 3. Adiciona ao conteúdo e exibe o modal
     previewContent.appendChild(iframe);
-    previewModal.style.display = 'flex';
+    previewModal.style.display = 'flex'; // Exibe o modal
 }
 
 // Configura o botão de fechar
-closePreviewBtn.addEventListener('click', () => {
-    previewModal.style.display = 'none';
-});
-
-
-// ===================================================
-// FUNÇÕES DE RENDERIZAÇÃO
-// ===================================================
-
-
-/**
- * 🔄 Carrega links da coleção atual e renderiza o grid.
- * @param {string} [collectionId=currentCollectionId] - ID da coleção a carregar.
- */
-async function loadLinks(collectionId = currentCollectionId) {
-    currentCollectionId = collectionId;
-    // FEEDBACK DE CARREGAMENTO: MOSTRA SPINNER NO GRID
-    linkGridElement.innerHTML = '<p class="loading-message">Carregando links... 🔄</p>'; 
-
-    try {
-        const response = await apiGetLinks(collectionId);
-        if (!response.ok) throw new Error('Falha ao carregar links');
-        
-        const links = await response.json(); 
-
-        linkGridElement.innerHTML = ''; 
-        
-        if (links.length === 0) {
-            linkGridElement.innerHTML = `<p class="empty-message">Nenhum link nesta coleção.</p>`;
-        } else {
-            const fragment = document.createDocumentFragment();
-            links.forEach(link => {
-                // USA A FUNÇÃO DO NOVO COMPONENTE, PASSANDO OS CALLBACKS
-                fragment.appendChild(
-                    createLinkCard(
-                        link, 
-                        // Callback para recarregar a lista
-                        () => loadLinks(currentCollectionId), 
-                        // Callback para abrir o preview
-                        openPreview,                       
-                        // Callback para iniciar a edição (função local)
-                        handleEditLink                     
-                    )
-                );
-            });
-            linkGridElement.appendChild(fragment);
-        }
-
-    } catch (error) {
-        linkGridElement.innerHTML = `<p class="error-message">❌ Erro ao buscar links: ${error.message}</p>`;
-    }
-
-
-    // Atualiza o estado visual da sidebar
-    document.querySelectorAll('.collection-list li').forEach(li => {
-        li.classList.remove('active');
-        if (li.getAttribute('data-id') === collectionId) {
-            li.classList.add('active');
-        }
+if (closePreviewBtn) {
+    closePreviewBtn.addEventListener('click', () => {
+        previewModal.style.display = 'none';
+        previewContent.innerHTML = ''; // Limpa o iframe ao fechar
     });
 }
 
+// ===================================================
+// FUNÇÕES DE RENDERIZAÇÃO E DADOS
+// ===================================================
+
 /**
- * ⚙️ Renderiza a barra lateral com todas as coleções.
+ * 🎨 Renderiza a lista de coleções na barra lateral.
  */
 async function renderSidebar() {
-    // FEEDBACK DE CARREGAMENTO: MOSTRA MENSAGEM NA SIDEBAR
-    sidebarElement.innerHTML = '<p class="loading-message">Carregando coleções... 🔄</p>';
-    let collections = [];
-
-    try {
-        const response = await apiGetCollections();
-        if (!response.ok) throw new Error('Falha ao carregar coleções');
-        
-        collections = await response.json(); 
-    } catch (error) {
-        sidebarElement.innerHTML = '<p class="error-message">❌ Erro ao carregar coleções.</p>';
-        return;
-    }
+    const collectionsResponse = await apiGetCollections();
+    const collections = collectionsResponse.ok ? await collectionsResponse.json() : [];
 
     const list = document.createElement('ul');
     list.className = 'collection-list';
 
-    // 1. Adiciona a opção "Todos os Links"
-    list.innerHTML += `<li data-id="all" class="active">📚 Todos os Links</li>`;
+    // Opção "Todos os Links"
+    list.innerHTML += `<li data-id="all" class="${currentCollectionId === 'all' ? 'active' : ''}">📁 Todos os Links</li>`;
 
-    // 2. Adiciona as coleções dinâmicas
+    // Coleções dinâmicas
     collections.forEach(col => {
-        list.innerHTML += `<li data-id="${col.id}">📁 ${col.name}</li>`;
+        list.innerHTML += `<li data-id="${col.id}" class="${col.id === currentCollectionId ? 'active' : ''}">📁 ${col.name}</li>`;
     });
 
     sidebarElement.innerHTML = '';
     sidebarElement.appendChild(list);
 
-    // 3. Adiciona event listeners para filtragem
-    list.querySelectorAll('li').forEach(li => {
-        li.addEventListener('click', (e) => {
-            const collectionId = e.target.getAttribute('data-id');
-            loadLinks(collectionId);
+    // Configura o listener para trocar de coleção
+    list.querySelectorAll('li').forEach(item => {
+        item.addEventListener('click', (e) => {
+            const newId = e.target.closest('li').dataset.id;
+            
+            // Remove a classe 'active' de todos e adiciona ao selecionado
+            list.querySelectorAll('li').forEach(li => li.classList.remove('active'));
+            e.target.closest('li').classList.add('active');
+            
+            currentCollectionId = newId;
+            loadLinks(currentCollectionId);
         });
     });
 }
 
-// ===================================================
-// HANDLERS DE AÇÃO
-// ===================================================
-
-// ** Handlers de Card (Delete, Toggle Read) foram movidos para LinkCard.js **
-
-
 /**
- * ✍️ Lida com a edição de um link (Callback chamado por LinkCard.js).
- * @param {string} linkId - ID do link a ser editado.
+ * 🔄 Carrega e renderiza os links da coleção atual.
  */
-async function handleEditLink(linkId) {
-    // 1. Busca os dados do link.
-    const allLinksResponse = await apiGetLinks('all'); 
-    if (!allLinksResponse.ok) return;
-
-    const allLinks = await allLinksResponse.json();
-    const linkToEdit = allLinks.find(l => l.id === linkId);
-
-    if (!linkToEdit) return;
-
-    // 2. Preenche o formulário com os dados do link
-    document.getElementById('link-url').value = linkToEdit.url;
-    document.getElementById('link-title').value = linkToEdit.title;
-    document.getElementById('link-description').value = linkToEdit.description;
-    document.getElementById('link-tags').value = linkToEdit.tags.join(', ');
+async function loadLinks(collectionId) {
+    linkGridElement.innerHTML = '<h2>Carregando links...</h2>';
     
-    // Seleciona a coleção correta no dropdown (Busca coleções de forma assíncrona)
-    const collectionsResponse = await apiGetCollections();
-    const collections = collectionsResponse.ok ? await collectionsResponse.json() : [];
-    
-    const select = document.getElementById('link-collection');
-    select.innerHTML = collections.map(col => 
-        `<option value="${col.id}" ${col.id === linkToEdit.collection_id ? 'selected' : ''}>${col.name}</option>`
-    ).join('');
-
-    // 3. Modifica o botão e exibe o formulário
-    const submitButton = linkFormElement.querySelector('button[type="submit"]');
-    submitButton.textContent = 'Atualizar Link';
-    linkFormElement.style.display = 'block';
-
-    // 4. Configura o handler de atualização
-    linkFormElement.removeEventListener('submit', handleLinkFormSubmit); 
-    
-    if (linkFormElement._currentUpdateListener) {
-        linkFormElement.removeEventListener('submit', linkFormElement._currentUpdateListener); 
+    const linksResponse = await apiGetLinks(collectionId);
+    if (!linksResponse.ok) {
+        linkGridElement.innerHTML = '<h2>Erro ao carregar links.</h2>';
+        return;
     }
-
-    const handleUpdate = async (e) => {
-        e.preventDefault();
-
-        // FEEDBACK DE CARREGAMENTO PARA ATUALIZAÇÃO
-        submitButton.textContent = 'Atualizando... ✏️';
-        linkFormElement.style.pointerEvents = 'none';
-
-        const url = document.getElementById('link-url').value;
-        const title = document.getElementById('link-title').value;
-        const description = document.getElementById('link-description').value;
-        const tags = document.getElementById('link-tags').value;
-        const collectionId = document.getElementById('link-collection').value;
-
-        const tagsArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag);
-
-        const updatedData = {
-            url: url,
-            title: title,
-            description: description,
-            tags: tagsArray,
-            collection_id: collectionId 
-        };
-
-        try {
-            const response = await apiUpdateLink(linkId, updatedData);
-            if (!response.ok) throw new Error('Falha na atualização');
-
-            loadLinks(currentCollectionId);
-        } catch (error) {
-            alert(`Erro ao atualizar: ${error.message}`);
-        }
-        
-        // 5. Reseta o formulário e o esconde
-        linkFormElement.reset();
-        linkFormElement.style.pointerEvents = 'auto';
-        submitButton.textContent = 'Salvar Link';
-        linkFormElement.style.display = 'none';
-
-        // Opcional: Re-anexa o handler de criação
-        linkFormElement.addEventListener('submit', handleLinkFormSubmit);
-        linkFormElement.removeEventListener('submit', handleUpdate);
-        linkFormElement._currentUpdateListener = null;
-    };
-
-    linkFormElement.addEventListener('submit', handleUpdate);
-    linkFormElement._currentUpdateListener = handleUpdate; 
+    
+    const links = await linksResponse.json();
+    
+    if (links.length === 0) {
+        linkGridElement.innerHTML = '<h2>Nenhum link encontrado nesta coleção.</h2>';
+        return;
+    }
+    
+    linkGridElement.innerHTML = '';
+    links.forEach(link => {
+        const cardElement = createLinkCard(link, loadLinks, openPreview);
+        linkGridElement.appendChild(cardElement);
+    });
 }
 
+// ===================================================
+// HANDLERS DO FORMULÁRIO
+// ===================================================
 
 /**
- * 💾 Lida com o envio do formulário de criação de link.
+ * 📥 Trata o envio do formulário de criação de link.
  */
 async function handleLinkFormSubmit(e) {
     e.preventDefault();
 
-    // FEEDBACK DE CARREGAMENTO PARA CRIAÇÃO
     const submitButton = linkFormElement.querySelector('button[type="submit"]');
     submitButton.textContent = 'Salvando... 🤖';
-    linkFormElement.style.pointerEvents = 'none';
+    linkFormElement.style.pointerEvents = 'none'; // Desabilita o formulário durante o processo
 
     const url = document.getElementById('link-url').value;
-    const title = document.getElementById('link-title').value;
-    const description = document.getElementById('link-description').value;
+    // const title = document.getElementById('link-title').value;         <-- REMOVIDO
+    // const description = document.getElementById('link-description').value; <-- REMOVIDO
     const tags = document.getElementById('link-tags').value;
     const collectionId = document.getElementById('link-collection').value;
 
@@ -276,23 +153,23 @@ async function handleLinkFormSubmit(e) {
 
     const newLinkData = {
         url: url,
-        title: title,
-        description: description,
+        // Title e Description foram removidos: o linkManager/scraper irá preenchê-los
         tags: tagsArray,
         collection_id: collectionId 
     };
 
     try {
-        const response = await apiCreateLink(newLinkData);
-        if (!response.ok) throw new Error('Falha na criação do link');
+        // A API (e o linkManager) agora farão o scraping e demorarão um pouco
+        const response = await apiCreateLink(newLinkData); 
+        if (!response.ok) throw new Error('Falha na criação do link: Status ' + response.status);
         
-        // 2. Atualiza a tela
+        // Recarrega os links da coleção atual para mostrar o novo item
         loadLinks(currentCollectionId);
     } catch (error) {
         alert(`Erro ao criar link: ${error.message}`);
     }
     
-    // 3. Reseta o formulário, o reabilita e o esconde
+    // FINALIZAÇÃO: Reseta, reabilita e esconde o formulário
     linkFormElement.reset();
     linkFormElement.style.pointerEvents = 'auto';
     submitButton.textContent = 'Salvar Link';
@@ -300,51 +177,48 @@ async function handleLinkFormSubmit(e) {
 }
 
 
+// ===================================================
+// HANDLER DE BUSCA (Search)
+// ===================================================
+
 /**
- * 🔎 Lida com a busca de links.
+ * 🔎 Trata o evento de busca (digitando no input).
  */
 async function handleSearch(e) {
-    const query = e.target.value.toLowerCase().trim();
+    const query = e.target.value.trim();
     
-    if (query.length > 0) {
-        // FEEDBACK DE CARREGAMENTO PARA BUSCA
-        linkGridElement.innerHTML = '<p class="loading-message">Buscando... 🔎</p>';
-
-        try {
-            const response = await apiSearchLinks(query);
-            if (!response.ok) throw new Error('Falha na busca');
-            
-            const results = await response.json();
-
-            linkGridElement.innerHTML = '';
-            
-            if (results.length === 0) {
-                linkGridElement.innerHTML = `<p class="empty-message">Nenhum resultado encontrado para "${query}".</p>`;
-            } else {
-                results.forEach(link => {
-                    // USA O COMPONENTE LinkCard.js para renderizar resultados da busca
-                    linkGridElement.appendChild(
-                        createLinkCard(
-                            link,
-                            () => loadLinks(currentCollectionId),
-                            openPreview,
-                            handleEditLink
-                        )
-                    );
-                });
-            }
-        } catch (error) {
-            linkGridElement.innerHTML = `<p class="error-message">❌ Erro na busca: ${error.message}</p>`;
-        }
-        
-        // Remove a seleção de coleção da sidebar durante a busca
-        document.querySelectorAll('.collection-list li').forEach(li => {
-            li.classList.remove('active');
-        });
-    } else {
-        // Se a busca estiver vazia, carrega a coleção atual
-        loadLinks(currentCollectionId);
+    if (query.length < 3 && query.length !== 0) {
+        // Ignora buscas muito curtas (a menos que a caixa esteja vazia)
+        linkGridElement.innerHTML = '<p>Digite pelo menos 3 caracteres para buscar.</p>';
+        return;
     }
+    
+    // Se a busca estiver vazia, carrega a coleção atual
+    if (query === '') {
+        loadLinks(currentCollectionId);
+        return;
+    }
+
+    linkGridElement.innerHTML = '<p>Buscando...</p>';
+    
+    const searchResponse = await apiSearchLinks(query);
+    if (!searchResponse.ok) {
+        linkGridElement.innerHTML = '<h2>Erro na busca.</h2>';
+        return;
+    }
+
+    const results = await searchResponse.json();
+
+    if (results.length === 0) {
+        linkGridElement.innerHTML = `<h2>Nenhum resultado encontrado para "${query}".</h2>`;
+        return;
+    }
+
+    linkGridElement.innerHTML = '';
+    results.forEach(link => {
+        const cardElement = createLinkCard(link, loadLinks, openPreview);
+        linkGridElement.appendChild(cardElement);
+    });
 }
 
 
@@ -378,7 +252,7 @@ function initApp() {
         const collections = collectionsResponse.ok ? await collectionsResponse.json() : [];
 
         select.innerHTML = collections.map(col => 
-            `<option value="${col.id}" ${col.id === currentCollectionId ? 'selected' : ''}>${col.name}</option>`
+            `<option value=\"${col.id}\" ${col.id === currentCollectionId ? 'selected' : ''}>${col.name}</option>`
         ).join('');
         
         linkFormElement.reset(); // Limpa os campos para nova criação
