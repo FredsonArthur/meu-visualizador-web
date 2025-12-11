@@ -36,6 +36,11 @@ async function fetchApi(url, method = 'GET', data = null) {
     return response;
 }
 
+// Criamos wrappers simples para facilitar a leitura e o uso do fetchApi
+// Como o linkCards.js também precisa de funções de API, vamos exportar o fetchApi
+// e definir as funções aqui para uso local, e LinkCard usará o fetchApi exportado.
+module.exports.fetchApi = fetchApi; 
+
 
 // ===================================================
 // VARIÁVEIS DO DOM
@@ -51,9 +56,7 @@ const closePreviewBtn = document.getElementById('close-preview-btn');
 const searchInput = document.getElementById('search-input'); 
 
 let currentCollectionId = 'col-inbox'; // Começa na Inbox
-
-// Exportamos a função fetchApi para que LinkCard possa usá-la
-module.exports.fetchApi = fetchApi; 
+let currentUpdateListener = null; // Variável para armazenar o listener de atualização temporário
 
 
 // ===================================================
@@ -125,15 +128,17 @@ async function renderSidebar() {
             e.target.closest('li').classList.add('active');
             
             currentCollectionId = newId;
-            loadLinks(currentCollectionId);
+            // Passamos startEditMode para loadLinks para manter o callback no ciclo de vida
+            loadLinks(currentCollectionId, startEditMode); 
         });
     });
 }
 
 /**
  * 🔄 Carrega e renderiza os links da coleção atual.
+ * ⚠️ ATUALIZADO para receber o callback de edição.
  */
-async function loadLinks(collectionId) {
+async function loadLinks(collectionId, editLinkCallback) { 
     linkGridElement.innerHTML = '<h2>Carregando links...</h2>';
     
     // CHAMA A API REAL
@@ -153,10 +158,9 @@ async function loadLinks(collectionId) {
     
     linkGridElement.innerHTML = '';
     
-    // A função loadLinks é passada para LinkCard.js para que ele possa recarregar a lista
-    // após ações (como deletar ou marcar como lido).
+    // Passamos o callback de edição para o LinkCard
     links.forEach(link => {
-        const cardElement = createLinkCard(link, loadLinks, openPreview);
+        const cardElement = createLinkCard(link, loadLinks, openPreview, editLinkCallback); // <-- NOVO CALLBACK AQUI
         linkGridElement.appendChild(cardElement);
     });
 }
@@ -167,17 +171,16 @@ async function loadLinks(collectionId) {
 // ===================================================
 
 /**
- * 📥 Trata o envio do formulário de criação de link.
+ * 📥 Trata o envio do formulário de criação de link (POST).
  */
 async function handleLinkFormSubmit(e) {
     e.preventDefault();
 
     const submitButton = linkFormElement.querySelector('button[type="submit"]');
     submitButton.textContent = 'Salvando... 🤖';
-    linkFormElement.style.pointerEvents = 'none'; // Desabilita o formulário durante o processo
+    linkFormElement.style.pointerEvents = 'none';
 
     const url = document.getElementById('link-url').value;
-    // Título e Descrição não são mais coletados, pois o Scraper/Backend faz isso.
     const tags = document.getElementById('link-tags').value;
     const collectionId = document.getElementById('link-collection').value;
 
@@ -190,12 +193,11 @@ async function handleLinkFormSubmit(e) {
     };
 
     try {
-        // CHAMA A API REAL
+        // CHAMA A API REAL (POST)
         const response = await fetchApi('/links', 'POST', newLinkData); 
         if (!response.ok) throw new Error('Falha na criação do link: Status ' + response.status);
         
-        // Recarrega os links da coleção atual para mostrar o novo item
-        loadLinks(currentCollectionId);
+        loadLinks(currentCollectionId, startEditMode); // Recarrega os links
     } catch (error) {
         alert(`Erro ao criar link: ${error.message}`);
     }
@@ -205,6 +207,87 @@ async function handleLinkFormSubmit(e) {
     linkFormElement.style.pointerEvents = 'auto';
     submitButton.textContent = 'Salvar Link';
     linkFormElement.style.display = 'none';
+}
+
+
+/**
+ * ✏️ NOVA FUNÇÃO: Inicia o modo de edição, preenche o formulário e configura o listener PUT.
+ * @param {string} linkId - O ID do link a ser editado.
+ */
+async function startEditMode(linkId) {
+    // 1. Encontra o link que será editado
+    const linksResponse = await fetchApi(`/links/${currentCollectionId}`); // Chama GET para buscar todos os links da coleção
+    const links = linksResponse.ok ? await linksResponse.json() : [];
+    const linkToEdit = links.find(link => link.id === linkId);
+
+    if (!linkToEdit) {
+        alert("Link para edição não encontrado!");
+        return;
+    }
+
+    // 2. Preenche o formulário com os dados do link
+    document.getElementById('link-url').value = linkToEdit.url;
+    // Assumindo que os campos existem no HTML para edição
+    if (document.getElementById('link-title')) {
+        document.getElementById('link-title').value = linkToEdit.title;
+    }
+    if (document.getElementById('link-description')) {
+        document.getElementById('link-description').value = linkToEdit.description;
+    }
+    document.getElementById('link-tags').value = linkToEdit.tags.join(', ');
+    document.getElementById('link-collection').value = linkToEdit.collection_id;
+    
+    // Desabilita a URL na edição
+    document.getElementById('link-url').disabled = true;
+
+    // 3. Configura o formulário para a EDIÇÃO (PUT)
+    const submitButton = linkFormElement.querySelector('button[type="submit"]');
+    submitButton.textContent = 'Salvar Edição';
+    linkFormElement.style.display = 'block';
+
+    // Remove o listener de CRIAR e define o temporário de EDITAR
+    linkFormElement.removeEventListener('submit', handleLinkFormSubmit); 
+    
+    // Cria um novo listener temporário (Closure) para lidar com a edição
+    const handleUpdate = async (e) => {
+        e.preventDefault();
+        
+        submitButton.textContent = 'Atualizando...';
+        linkFormElement.style.pointerEvents = 'none';
+
+        const updatedData = {
+            title: document.getElementById('link-title')?.value || linkToEdit.title,
+            description: document.getElementById('link-description')?.value || linkToEdit.description,
+            tags: document.getElementById('link-tags').value.split(',').map(t => t.trim()).filter(t => t),
+            collection_id: document.getElementById('link-collection').value
+        };
+
+        try {
+            // CHAMA A API REAL (PUT)
+            const response = await fetchApi(`/links/${linkId}`, 'PUT', updatedData); 
+            if (!response.ok) throw new Error('Falha na atualização.');
+
+            loadLinks(currentCollectionId, startEditMode); // Recarrega o grid
+        } catch (error) {
+            alert(`Erro ao atualizar link: ${error.message}`);
+        }
+        
+        // 4. Finaliza e retorna ao modo de criação
+        document.getElementById('link-url').disabled = false; // Reabilita a URL
+        
+        linkFormElement.reset();
+        linkFormElement.style.pointerEvents = 'auto';
+        submitButton.textContent = 'Salvar Link';
+        linkFormElement.style.display = 'none';
+        
+        // Coloca o listener de criação de volta (importante!)
+        linkFormElement.removeEventListener('submit', handleUpdate); 
+        linkFormElement.addEventListener('submit', handleLinkFormSubmit);
+        currentUpdateListener = null; // Limpa a referência
+    };
+    
+    linkFormElement.addEventListener('submit', handleUpdate);
+    currentUpdateListener = handleUpdate; // Salva a referência para remoção futura
 }
 
 
@@ -225,7 +308,7 @@ async function handleSearch(e) {
     
     // Se a busca estiver vazia, carrega a coleção atual
     if (query === '') {
-        loadLinks(currentCollectionId);
+        loadLinks(currentCollectionId, startEditMode); // MANTEMOS O CALLBACK DE EDIÇÃO
         return;
     }
 
@@ -248,7 +331,8 @@ async function handleSearch(e) {
 
     linkGridElement.innerHTML = '';
     results.forEach(link => {
-        const cardElement = createLinkCard(link, loadLinks, openPreview);
+        // Passamos o callback de edição para os resultados da busca também
+        const cardElement = createLinkCard(link, loadLinks, openPreview, startEditMode);
         linkGridElement.appendChild(cardElement);
     });
 }
@@ -266,17 +350,22 @@ function initApp() {
     renderSidebar();
     
     // 2. Carrega os links da coleção inicial
-    loadLinks(currentCollectionId);
+    loadLinks(currentCollectionId, startEditMode); // <-- PASSAMOS O CALLBACK DE EDIÇÃO AQUI
 
     // 3. Configura o formulário de adição
     linkFormElement.addEventListener('submit', handleLinkFormSubmit);
     addLinkButton.addEventListener('click', async () => { 
         // Assegura que o formulário está no modo 'Criação'
         linkFormElement.querySelector('button[type="submit"]').textContent = 'Salvar Link';
-        if (linkFormElement._currentUpdateListener) {
-            linkFormElement.removeEventListener('submit', linkFormElement._currentUpdateListener); 
+        
+        // Remove o listener de UPDATE (se existir) e garante o listener de CRIAÇÃO
+        if (currentUpdateListener) {
+            linkFormElement.removeEventListener('submit', currentUpdateListener); 
+            currentUpdateListener = null;
         }
+        linkFormElement.removeEventListener('submit', handleLinkFormSubmit); // Remove por segurança
         linkFormElement.addEventListener('submit', handleLinkFormSubmit);
+
 
         // Preenche as opções de coleção (Busca coleções de forma assíncrona com FETCH REAL)
         const select = document.getElementById('link-collection');
@@ -287,6 +376,7 @@ function initApp() {
             `<option value=\"${col.id}\" ${col.id === currentCollectionId ? 'selected' : ''}>${col.name}</option>`
         ).join('');
         
+        document.getElementById('link-url').disabled = false; // Reabilita a URL para criação
         linkFormElement.reset(); // Limpa os campos para nova criação
         linkFormElement.style.display = 'block';
     });

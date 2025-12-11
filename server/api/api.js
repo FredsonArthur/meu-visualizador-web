@@ -1,5 +1,5 @@
-
-const linkManager = require('../api/linkManager'); 
+// CORREÇÃO: linkManager.js está na mesma pasta (server/api), então usamos './linkManager'
+const linkManager = require('./linkManager'); 
 
 // ===================================================
 // Ações da API (Controladores)
@@ -51,11 +51,15 @@ function deleteLink(req, res) {
 function updateLink(req, res) {
     const { linkId } = req.params;
     const updatedData = req.body;
+    
+    // Chama o linkManager para atualizar os dados no dataStore.json
     const success = linkManager.updateLink(linkId, updatedData);
 
     if (success) {
+        // HTTP 200 OK (Link atualizado)
         res.status(200).json({ message: "Link atualizado com sucesso." });
     } else {
+        // HTTP 404 Not Found (Link ID não existe)
         res.status(404).json({ error: "Falha ao atualizar link. ID não encontrado." });
     }
 }

@@ -81,11 +81,12 @@ async function handleDeleteLink(e, loadLinks) {
 
 /**
  * ✏️ Placeholder para a função de edição (chama um callback do home.js).
+ * ⚠️ ESTA FUNÇÃO JÁ CHAMA O CALLBACK DE EDIÇÃO PASSADO POR home.js
  */
 function handleEditLink(e, editLinkCallback) {
     e.stopPropagation();
     const linkId = e.currentTarget.getAttribute('data-id');
-    // O callback deve ser implementado no home.js para preencher o formulário
+    // Chama o startEditMode implementado no home.js
     editLinkCallback(linkId); 
 }
 

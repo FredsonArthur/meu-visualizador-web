@@ -35,7 +35,7 @@ function writeData(data) {
 }
 
 // ===================================================
-// Ações da API (simulando rotas)
+// Ações da API
 // ===================================================
 
 /**
@@ -109,17 +109,20 @@ function deleteLink(linkId) {
 }
 
 /**
- * ✏️ Atualiza as propriedades de um link existente.
+ * ✏️ Atualiza as propriedades de um link existente. (CORRETO PARA EDIÇÃO)
+ * @param {string} linkId - O ID do link a ser atualizado.
+ * @param {Object} newData - Os novos dados (title, description, tags, collection_id).
  */
 function updateLink(linkId, newData) {
     const data = readData();
     const index = data.links.findIndex(link => link.id === linkId);
 
     if (index !== -1) {
-        // Aplica os novos dados sobre o link existente 
+        // Aplica os novos dados sobre o link existente (preservando url, data_saved, etc.)
         data.links[index] = {
             ...data.links[index],
             ...newData,
+            // Sobrescreve as tags
             tags: newData.tags || data.links[index].tags 
         };
         writeData(data);
