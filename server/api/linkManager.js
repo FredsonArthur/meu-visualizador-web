@@ -1,10 +1,9 @@
 const fs = require('fs');
 const path = require('path');
-// MUDANÇA: Importamos as duas funções do nosso scraper mock
-const { captureScreenshot, getMetadata } = require('./scraper'); 
+const { captureScreenshot, getMetadata } = require('./scraper');
 
-// Define o caminho para o arquivo de dados
-const DATA_PATH = path.join(__dirname, '..', 'db', 'dataStore.json');
+
+const DATA_PATH = path.join(__dirname, 'db', 'dataStore.json'); 
 
 // ===================================================
 // UTILITÁRIOS DE DADOS
