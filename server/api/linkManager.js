@@ -3,7 +3,9 @@ const path = require('path');
 const { captureScreenshot, getMetadata } = require('./scraper');
 
 
-const DATA_PATH = path.join(__dirname, 'db', 'dataStore.json'); 
+// CORREÇÃO CRÍTICA DO CAMINHO:
+// '__dirname' (que é /server/api) + '..' (sobe para /server) + 'db' + 'dataStore.json'
+const DATA_PATH = path.join(__dirname, '..', 'db', 'dataStore.json'); 
 
 // ===================================================
 // UTILITÁRIOS DE DADOS
@@ -17,7 +19,8 @@ function readData() {
         const data = fs.readFileSync(DATA_PATH, 'utf8');
         return JSON.parse(data);
     } catch (error) {
-        console.error("Erro ao ler dataStore.json:", error.message);
+        // Log claro para debugar o problema de leitura/escrita
+        console.error("Erro ao ler dataStore.json (Verifique o caminho ou a sintaxe JSON):", error.message);
         // Retorna uma estrutura vazia se houver erro de leitura
         return { collections: [], links: [] };
     }
@@ -62,7 +65,7 @@ function getLinksByCollection(collectionId) {
  * @param {Object} linkData - Os dados do novo link (url, collection_id, tags).
  * @returns {Object} O novo objeto LinkItem.
  */
-async function createLink(linkData) { // FUNÇÃO AGORA É ASSÍNCRONA
+async function createLink(linkData) { 
     const data = readData();
     const newLinkId = `lk-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
     
@@ -70,13 +73,13 @@ async function createLink(linkData) { // FUNÇÃO AGORA É ASSÍNCRONA
     const previewUrl = await captureScreenshot(linkData.url, newLinkId);
     
     // 2. CHAMA O SCRAPER PARA OBTER TÍTULO/DESCRIÇÃO
-    const metadata = await getMetadata(linkData.url); // NOVO!
+    const metadata = await getMetadata(linkData.url); 
 
     const newLink = {
         id: newLinkId, 
         date_saved: new Date().toISOString(),
         url: linkData.url, 
-        collection_id: linkData.collection_id, 
+        collection_id: linkData.collectionId,
         tags: linkData.tags || [],
         is_read: false,
         
@@ -84,7 +87,7 @@ async function createLink(linkData) { // FUNÇÃO AGORA É ASSÍNCRONA
         title: metadata.title || linkData.url, 
         description: metadata.description || 'Nenhuma descrição fornecida pelo scraper.', 
         
-        preview_image_url: previewUrl // URL do screenshot
+        preview_image_url: previewUrl
     };
     
     data.links.unshift(newLink); 
@@ -109,7 +112,7 @@ function deleteLink(linkId) {
 }
 
 /**
- * ✏️ Atualiza as propriedades de um link existente. (CORRETO PARA EDIÇÃO)
+ * ✏️ Atualiza as propriedades de um link existente.
  * @param {string} linkId - O ID do link a ser atualizado.
  * @param {Object} newData - Os novos dados (title, description, tags, collection_id).
  */
@@ -122,7 +125,7 @@ function updateLink(linkId, newData) {
         data.links[index] = {
             ...data.links[index],
             ...newData,
-            // Sobrescreve as tags
+            // Garante que tags seja um array, mesmo que não venha na requisição
             tags: newData.tags || data.links[index].tags 
         };
         writeData(data);
@@ -173,7 +176,7 @@ function searchLinks(query) {
 }
 
 
-// Exporta as funções para serem usadas no Front-end (via API mock)
+// Exporta as funções
 module.exports = {
     getAllCollections,
     getLinksByCollection,

@@ -1,8 +1,15 @@
 // Arquivo: src/components/LinkCard.js
 
-// Importa a função fetchApi exportada de home.js. 
-// Isso funciona porque home.js exportou: module.exports.fetchApi = fetchApi;
-const { fetchApi } = require('../pages/home'); 
+// 🎯 CORREÇÃO CRÍTICA: Trocar 'require' por 'import' e adicionar '.js' no caminho
+// Importa as funções e variáveis necessárias de home.js (que agora as exporta)
+import { 
+    fetchApi, 
+    loadLinks, 
+    openPreview, 
+    currentCollectionId,
+    handleEditLink // <-- Importamos a função de callback para abrir o formulário de edição
+} from '../pages/home.js'; 
+
 
 // ----------------------------------------------------
 // HANDLERS DE AÇÃO (Migrados para Fetch Real)
@@ -10,10 +17,8 @@ const { fetchApi } = require('../pages/home');
 
 /**
  * 🔄 Lida com a alternância do status de leitura.
- * @param {Event} e - Evento de clique.
- * @param {Function} loadLinks - Função para recarregar o grid principal.
  */
-async function handleToggleReadStatus(e, loadLinks) {
+async function handleToggleReadStatus(e) {
     e.stopPropagation(); 
     const button = e.currentTarget;
     const linkId = button.getAttribute('data-id');
@@ -24,16 +29,17 @@ async function handleToggleReadStatus(e, loadLinks) {
     button.disabled = true;
 
     try {
-        // CHAMADA DE API REAL: PUT /api/links/:linkId/read
-        const response = await fetchApi(`/links/${linkId}/read`, 'PUT');
+        // CHAMADA DE API REAL: PUT /api/links/toggle-read/:linkId
+        const response = await fetchApi(`/links/toggle-read/${linkId}`, 'PUT');
         
         if (!response.ok) throw new Error('Falha ao alternar status: ' + response.status);
         
-        // 2. Sucesso: Recarrega a lista para refletir a mudança
-        // Isso é mais seguro se houver classes CSS dependendo do status.
-        loadLinks();
+        // 2. Sucesso: Recarrega a lista
+        // Usa a currentCollectionId importada para recarregar o grid correto
+        loadLinks(currentCollectionId); 
 
     } catch (error) {
+        console.error("Erro ao alterar status:", error);
         alert(`Erro ao alterar status: ${error.message}`);
         // 3. Erro: Reverte o feedback
         button.textContent = originalIcon;
@@ -42,83 +48,70 @@ async function handleToggleReadStatus(e, loadLinks) {
     }
 }
 
+
 /**
  * 🗑️ Lida com a exclusão de um link.
- * @param {Event} e - Evento de clique.
- * @param {Function} loadLinks - Função para recarregar o grid principal.
  */
-async function handleDeleteLink(e, loadLinks) {
+async function handleDeleteLink(e) {
     e.stopPropagation();
     const button = e.currentTarget;
     const linkId = button.getAttribute('data-id');
 
-    if (!confirm('Tem certeza de que deseja excluir este link permanentemente?')) return;
-
+    if (!confirm("Tem certeza de que deseja excluir este link?")) {
+        return;
+    }
+    
     // 1. Feedback visual
     const originalIcon = button.textContent;
-    button.textContent = '...';
+    button.textContent = '🗑️...';
     button.disabled = true;
 
     try {
         // CHAMADA DE API REAL: DELETE /api/links/:linkId
         const response = await fetchApi(`/links/${linkId}`, 'DELETE');
+        
+        if (response.status !== 204) throw new Error('Falha ao excluir link: ' + response.status);
 
-        if (response.status === 204) { // 204 No Content
-            // 2. Sucesso: Remove o card do DOM e recarrega a lista
-            button.closest('.link-card').remove();
-            loadLinks(); 
-        } else {
-            throw new Error('Falha na exclusão: ' + response.status);
-        }
+        // 2. Sucesso: Recarrega a lista
+        loadLinks(currentCollectionId);
+        
+        alert('Link excluído com sucesso!');
+
     } catch (error) {
+        console.error("Erro ao excluir link:", error);
         alert(`Erro ao excluir link: ${error.message}`);
-        // 3. Erro: Reverte o feedback
-        button.textContent = originalIcon;
     } finally {
+        button.textContent = originalIcon;
         button.disabled = false;
     }
 }
 
-/**
- * ✏️ Placeholder para a função de edição (chama um callback do home.js).
- * ⚠️ ESTA FUNÇÃO JÁ CHAMA O CALLBACK DE EDIÇÃO PASSADO POR home.js
- */
-function handleEditLink(e, editLinkCallback) {
-    e.stopPropagation();
-    const linkId = e.currentTarget.getAttribute('data-id');
-    // Chama o startEditMode implementado no home.js
-    editLinkCallback(linkId); 
-}
-
 
 // ----------------------------------------------------
-// COMPONENTE PRINCIPAL
+// CRIAÇÃO DO COMPONENTE
 // ----------------------------------------------------
 
 /**
- * 🎨 Cria e retorna o elemento DOM (Card) para um Link.
- * @param {Object} link - Objeto LinkItem.
- * @param {function} loadLinks - Função para recarregar a lista de links após uma ação.
- * @param {function} openPreview - Função para abrir o modal de pré-visualização.
- * @param {function} editLinkCallback - Callback para iniciar a edição do link (vazio por padrão se não for passado).
- * @returns {HTMLElement} O elemento <div> do card.
+ * 🎨 Cria o elemento DOM para um Link Card.
+ * @param {Object} link - Os dados do link.
+ * @param {Function} editLinkCallback - A função de callback de edição (que vem de home.js).
+ * @returns {HTMLElement} O elemento <div> do Card.
  */
-function createLinkCard(link, loadLinks, openPreview, editLinkCallback = () => {}) {
+// 🎯 CORREÇÃO CRÍTICA: Trocar 'module.exports' por 'export function'
+export function createLinkCard(link, editLinkCallback) {
     const card = document.createElement('div');
-    card.className = `link-card ${link.is_read ? 'read' : 'unread'}`; 
-    card.setAttribute('data-link-id', link.id);
+    card.className = `link-card ${link.is_read ? 'read' : 'unread'}`;
+    
+    // Cria a cor da borda baseada no ID da coleção
+    const collectionColor = `var(--collection-color-${link.collection_id})`;
+    card.style.borderLeftColor = collectionColor;
 
-    // Estrutura do Card com base no snippet anterior
     card.innerHTML = `
-        <div class="card-preview">
-            <img src="${link.preview_image_url || 'https://via.placeholder.com/400x300?text=Preview+Indisponível'}" 
-                 alt="Preview do site"
-                 onerror="this.onerror=null;this.src='https://via.placeholder.com/400x300?text=Preview+Indisponível';">
-        </div>
         <div class="card-content">
             <h3 class="card-title" title="${link.title || link.url}">${link.title || 'Sem Título Capturado'}</h3>
             <p class="card-description">${link.description || 'Nenhuma descrição.'}</p>
             <p class="tags">${link.tags.map(tag => `<span class="tag">#${tag}</span>`).join(' ')}</p>
+            
             <a href="${link.url}" target="_blank" class="url-link" onclick="event.stopPropagation();">Abrir Link</a>
             
             <div class="card-actions">
@@ -131,19 +124,19 @@ function createLinkCard(link, loadLinks, openPreview, editLinkCallback = () => {
         </div>
     `;
 
-    // Adiciona evento para abrir o preview ao clicar no card
+    // Adiciona evento para abrir o preview ao clicar no card (fora dos botões)
     card.addEventListener('click', () => {
         openPreview(link.url);
     });
     
     // Adiciona eventos de ação
-    card.querySelector('.btn-toggle-read').addEventListener('click', (e) => handleToggleReadStatus(e, loadLinks));
-    card.querySelector('.btn-edit').addEventListener('click', (e) => handleEditLink(e, editLinkCallback));
-    card.querySelector('.btn-delete').addEventListener('click', (e) => handleDeleteLink(e, loadLinks));
+    card.querySelector('.btn-toggle-read').addEventListener('click', handleToggleReadStatus);
+    
+    // O botão de Edição chama a função de callback passada por home.js
+    // A função importada handleEditLink (que está em home.js) é passada aqui como editLinkCallback
+    card.querySelector('.btn-edit').addEventListener('click', (e) => editLinkCallback(e, link)); 
+    
+    card.querySelector('.btn-delete').addEventListener('click', handleDeleteLink);
 
     return card;
 }
-
-module.exports = {
-    createLinkCard,
-};
